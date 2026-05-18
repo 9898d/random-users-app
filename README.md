@@ -49,7 +49,7 @@
 
 ### 1. Клонирование репозитория
 ```bash
-git clone <https://github.com/9898d/user-management>
+git clone https://github.com/9898d/random-users-app
 cd random_users_app
 ```
 
