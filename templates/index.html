@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пользователи</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .controls { margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 5px; }
+        .controls input { padding: 8px; margin-right: 10px; width: 200px; }
+        .controls button { padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .controls button:hover { background: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .pagination { margin-top: 20px; text-align: center; }
+        .pagination a, .pagination span { display: inline-block; padding: 8px 12px; margin: 0 4px; text-decoration: none; }
+        .pagination a { background: #007bff; color: white; border-radius: 4px; }
+        .pagination a:hover { background: #0056b3; }
+        .current { background: #6c757d; color: white; border-radius: 4px; }
+        .user-link { color: #007bff; text-decoration: none; }
+        .user-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>База данных пользователей</h1>
+
+        <div class="controls">
+            <h3>Загрузить новых пользователей</h3>
+            <input type="number" id="count" placeholder="Количество человек" value="100">
+            <button onclick="loadUsers()">Загрузить</button>
+            <div id="loadMessage"></div>
+        </div>
+
+        <h2>Список пользователей</h2>
+        <div id="usersTable"></div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+
+        function loadUsersTable(page = 1) {
+            currentPage = page;
+            fetch(`/api/users?page=${page}&limit=20`)
+                .then(response => response.json())
+                .then(data => {
+                    renderTable(data.users, data.page, data.total_pages, data.total);
+                });
+        }
+
+        function renderTable(users, page, totalPages, total) {
+            let html = `
+                <p>Всего пользователей: ${total}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Пол</th>
+                            <th>Имя</th>
+                            <th>Фамилия</th>
+                            <th>Телефон</th>
+                            <th>Email</th>
+                            <th>Место проживания</th>
+                            <th>Детали</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            users.forEach(user => {
+                html += `
+                    <tr>
+                        <td>${user.gender || '-'}</td>
+                        <td>${user.first_name || '-'}</td>
+                        <td>${user.last_name || '-'}</td>
+                        <td>${user.phone || '-'}</td>
+                        <td>${user.email || '-'}</td>
+                        <td>${user.city || '-'}</td>
+                        <td><a href="/user/${user.id}" class="user-link" target="_blank">Подробнее</a></td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+
+            // Пагинация
+            html += `<div class="pagination">`;
+            if (page > 1) {
+                html += `<a href="#" onclick="loadUsersTable(${page-1}); return false;">« Предыдущая</a>`;
+            }
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === page) {
+                    html += `<span class="current">${i}</span>`;
+                } else if (i <= 5 || i > totalPages - 2 || Math.abs(i - page) <= 2) {
+                    html += `<a href="#" onclick="loadUsersTable(${i}); return false;">${i}</a>`;
+                } else if (i === 6 && page > 5) {
+                    html += `<span>...</span>`;
+                }
+            }
+
+            if (page < totalPages) {
+                html += `<a href="#" onclick="loadUsersTable(${page+1}); return false;">Следующая »</a>`;
+            }
+            html += `</div>`;
+
+            document.getElementById('usersTable').innerHTML = html;
+        }
+
+        function loadUsers() {
+            const count = document.getElementById('count').value;
+            const messageDiv = document.getElementById('loadMessage');
+            messageDiv.innerHTML = 'Загрузка...';
+
+            fetch('/api/load_users', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({count: parseInt(count)})
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageDiv.innerHTML = `<span style="color: green;">${data.message}</span>`;
+                loadUsersTable(1);
+            })
+            .catch(error => {
+                messageDiv.innerHTML = `<span style="color: red;">Ошибка: ${error}</span>`;
+            });
+        }
+
+        // Загружаем таблицу при открытии страницы
+        loadUsersTable(1);
+    </script>
+</body>
+</html>
